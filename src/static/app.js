@@ -25,9 +25,50 @@ document.addEventListener("DOMContentLoaded", () => {
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <div class="participants">
+            <h5>Participants</h5>
+            ${details.participants.length > 0 ? `
+              <div class="participants-list">
+                ${details.participants.map((participant) => `
+                  <div class="participant-item" data-participant="${participant}" data-activity="${name}">
+                    <span class="participant-name">${participant}</span>
+                    <button class="delete-participant" title="Remove participant">×</button>
+                  </div>
+                `).join('')}
+              </div>
+            ` : `<p class="no-participants">No participants have signed up yet.</p>`}
+          </div>
         `;
 
         activitiesList.appendChild(activityCard);
+
+        // Add delete event listeners
+        activityCard.querySelectorAll(".delete-participant").forEach((btn) => {
+          btn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            const participantItem = btn.closest(".participant-item");
+            const participant = participantItem.dataset.participant;
+            const activity = participantItem.dataset.activity;
+
+            try {
+              const response = await fetch(
+                `/activities/${encodeURIComponent(activity)}/participants/${encodeURIComponent(participant)}`,
+                { method: "DELETE" }
+              );
+
+              if (response.ok) {
+                participantItem.remove();
+                // Refresh activities to update availability
+                fetchActivities();
+              } else {
+                alert("Failed to remove participant");
+              }
+            } catch (error) {
+              alert("Error removing participant");
+              console.error("Error:", error);
+            }
+          });
+        });
 
         // Add option to select dropdown
         const option = document.createElement("option");
@@ -62,6 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
